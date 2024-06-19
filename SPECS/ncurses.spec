@@ -1,22 +1,19 @@
+%global revision 20230114
 Summary: Ncurses support utilities
 Name: ncurses
-Version: 5.9
-Release: 14.20130511%{?dist}
+Version: 6.4
+Release: 3.%{revision}%{?dist}
 License: MIT
-Group: System Environment/Base
-URL: http://invisible-island.net/ncurses/ncurses.html
-Source0: ftp://invisible-island.net/ncurses/ncurses-%{version}.tar.gz
+URL: https://invisible-island.net/ncurses/ncurses.html
+Source0: https://invisible-mirror.net/archives/ncurses/current/ncurses-%{version}-%{revision}.tgz
+Source1: https://invisible-mirror.net/archives/ncurses/current/ncurses-%{version}-%{revision}.tgz.asc
+Source2: https://invisible-island.net/public/dickey@invisible-island.net-rsa3072.asc
 
-Patch1: ncurses-5.9-20120616-patch.sh.bz2
-Patch2: ncurses-5.9-20120622-20130413.patch.xz
-Patch3: ncurses-5.9-20130427-20130511.patch.xz
 Patch8: ncurses-config.patch
 Patch9: ncurses-libs.patch
-Patch10: ncurses-clear.patch
 Patch11: ncurses-urxvt.patch
 Patch12: ncurses-kbs.patch
-Patch13: ncurses-setup.patch
-BuildRequires: gpm-devel pkgconfig
+BuildRequires: gcc gcc-c++ gpm-devel gnupg2 make pkgconfig
 
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
 
@@ -32,12 +29,7 @@ tool captoinfo.
 
 %package libs
 Summary: Ncurses libraries
-Group: System Environment/Libraries
 Requires: %{name}-base = %{version}-%{release}
-# libs introduced in 5.6-13 
-Obsoletes: ncurses < 5.6-13
-Conflicts: ncurses < 5.6-13
-Obsoletes: libtermcap < 2.0.8-48
 
 %description libs
 The curses library routines are a terminal-independent method of
@@ -47,14 +39,37 @@ discontinued 4.4 BSD classic curses library.
 
 This package contains the ncurses libraries.
 
+%package compat-libs
+Summary: Ncurses compatibility libraries
+Requires: %{name}-base = %{version}-%{release}
+
+%description compat-libs
+The curses library routines are a terminal-independent method of
+updating character screens with reasonable optimization.  The ncurses
+(new curses) library is a freely distributable replacement for the
+discontinued 4.4 BSD classic curses library.
+
+This package contains the ABI version 5 of the ncurses libraries for
+compatibility.
+
+%package c++-libs
+Summary: Ncurses C++ bindings
+Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+
+%description c++-libs
+The curses library routines are a terminal-independent method of
+updating character screens with reasonable optimization.  The ncurses
+(new curses) library is a freely distributable replacement for the
+discontinued 4.4 BSD classic curses library.
+
+This package contains C++ bindings of the ncurses ABI version 6 libraries.
+
 %package base
 Summary: Descriptions of common terminals
-Group: System Environment/Base
-Obsoletes: termcap < 1:5.5-2
-# base introduced in 5.6-13 
-Conflicts: ncurses < 5.6-13
-# /lib -> /usr/lib move
-Conflicts: filesystem < 3
+# rxvt-unicode-256color entry used to be in rxvt-unicode and briefly
+# in rxvt-unicode-terminfo
+Conflicts: rxvt-unicode < 9.22-15
+Obsoletes: rxvt-unicode-terminfo < 9.22-18
 BuildArch: noarch
 
 %description base
@@ -63,7 +78,6 @@ descriptions are included in the ncurses-term package.
 
 %package term
 Summary: Terminal descriptions
-Group: System Environment/Base
 Requires: %{name}-base = %{version}-%{release}
 BuildArch: noarch
 
@@ -73,11 +87,9 @@ the ncurses-base package.
 
 %package devel
 Summary: Development files for the ncurses library
-Group: Development/Libraries
 Requires: %{name}-libs%{?_isa} = %{version}-%{release}
+Requires: %{name}-c++-libs%{?_isa} = %{version}-%{release}
 Requires: pkgconfig
-Obsoletes: libtermcap-devel < 2.0.8-48
-Provides: libtermcap-devel = 2.0.8-48
 
 %description devel
 The header files and libraries for developing applications that use
@@ -88,30 +100,20 @@ which will use ncurses.
 
 %package static
 Summary: Static libraries for the ncurses library
-Group: Development/Libraries
 Requires: %{name}-devel%{?_isa} = %{version}-%{release}
 
 %description static
 The ncurses-static package includes static libraries of the ncurses library.
 
 %prep
-%setup -q
+%{gpgverify} --keyring=%{SOURCE2} --signature=%{SOURCE1} --data=%{SOURCE0}
 
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
+%setup -q -n %{name}-%{version}-%{revision}
 
 %patch8 -p1 -b .config
 %patch9 -p1 -b .libs
-# -b would add the backup to rpm
-%patch10 -p1
 %patch11 -p1 -b .urxvt
 %patch12 -p1 -b .kbs
-%patch13 -p1 -b .setup
-
-# this will be in documentation, drop executable bits
-cp -p install-sh test
-find test -type f | xargs chmod 644
 
 for f in ANNOUNCE; do
     iconv -f iso8859-1 -t utf8 -o ${f}{_,} &&
@@ -119,35 +121,54 @@ for f in ANNOUNCE; do
 done
 
 %build
-%global ncurses_options \\\
-    --with-shared --without-ada --with-ospeed=unsigned \\\
-    --enable-hard-tabs --enable-xmc-glitch --enable-colorfgbg \\\
-    --with-terminfo-dirs=%{_sysconfdir}/terminfo:%{_datadir}/terminfo \\\
-    --enable-overwrite \\\
-    --enable-pc-files \\\
-    --with-pkg-config-libdir=%{_libdir}/pkgconfig \\\
-    --with-termlib=tinfo \\\
-    --with-chtype=long \\\
-    --with-cxx-shared \\\
-    --with-xterm-kbs=DEL
+common_options="\
+    --enable-colorfgbg \
+    --enable-hard-tabs \
+    --enable-overwrite \
+    --enable-pc-files \
+    --enable-xmc-glitch \
+    --disable-stripping \
+    --disable-wattr-macros \
+    --with-cxx-shared \
+    --with-ospeed=unsigned \
+    --with-pkg-config-libdir=%{_libdir}/pkgconfig \
+    --with-shared \
+    --with-terminfo-dirs=%{_sysconfdir}/terminfo:%{_datadir}/terminfo \
+    --with-termlib=tinfo \
+    --with-ticlib=tic \
+    --with-xterm-kbs=DEL \
+    --without-ada"
+abi5_options="--with-chtype=long"
 
-mkdir narrowc widec
-cd narrowc
-ln -s ../configure .
-%configure %{ncurses_options} --with-ticlib
-make %{?_smp_mflags} libs
-make %{?_smp_mflags} -C progs
+for abi in 5 6; do
+    for char in narrowc widec; do
+        mkdir $char$abi
+        pushd $char$abi
+        ln -s ../configure .
 
-cd ../widec
-ln -s ../configure .
-%configure %{ncurses_options} --enable-widec --without-progs
-make %{?_smp_mflags} libs
-cd ..
+        [ $abi = 6 -a $char = widec ] && progs=yes || progs=no
+
+        %configure $(
+            echo $common_options --with-abi-version=$abi
+            [ $abi = 5 ] && echo $abi5_options
+            [ $char = widec ] && echo --enable-widec
+            [ $progs = yes ] || echo --without-progs
+        )
+
+        %make_build libs
+        [ $progs = yes ] && %make_build -C progs
+
+        popd
+    done
+done
 
 %install
-make -C narrowc DESTDIR=$RPM_BUILD_ROOT install.{libs,progs,data}
-rm -f $RPM_BUILD_ROOT%{_libdir}/libtinfo.*
-make -C widec DESTDIR=$RPM_BUILD_ROOT install.{libs,includes,man}
+make -C narrowc5 DESTDIR=$RPM_BUILD_ROOT install.libs
+rm ${RPM_BUILD_ROOT}%{_libdir}/lib{tic,tinfo}.so.5*
+make -C widec5 DESTDIR=$RPM_BUILD_ROOT install.libs
+make -C narrowc6 DESTDIR=$RPM_BUILD_ROOT install.libs
+rm ${RPM_BUILD_ROOT}%{_libdir}/lib{tic,tinfo}.so.6*
+make -C widec6 DESTDIR=$RPM_BUILD_ROOT install.{libs,progs,data,includes,man}
 
 chmod 755 ${RPM_BUILD_ROOT}%{_libdir}/lib*.so.*.*
 chmod 644 ${RPM_BUILD_ROOT}%{_libdir}/lib*.a
@@ -158,11 +179,12 @@ baseterms=
 
 # prepare -base and -term file lists
 for termname in \
-    ansi dumb linux vt100 vt100-nav vt102 vt220 vt52 \
+    alacritty ansi dumb linux vt100 vt100-nav vt102 vt220 vt52 \
     Eterm\* aterm bterm cons25 cygwin eterm\* gnome gnome-256color hurd jfbterm \
-    konsole konsole-256color mach\* mlterm mrxvt nsterm putty\* pcansi \
-    rxvt{,-\*} screen{,-\*color,.\*} st{,-\*} sun teraterm teraterm2.3 \
-    vte vte-256color vwmterm wsvt25\* xfce xterm xterm-\*
+    kitty konsole konsole-256color mach\* mlterm mrxvt nsterm putty{,-256color} pcansi \
+    rxvt{,-\*} screen{,-\*color,.[^mlp]\*,.linux,.mlterm\*,.putty{,-256color},.mrxvt} \
+    st{,-\*color} sun teraterm teraterm2.3 tmux{,-\*} vte vte-256color vwmterm \
+    wsvt25\* xfce xterm xterm-\*
 do
     for i in $RPM_BUILD_ROOT%{_datadir}/terminfo/?/$termname; do
         for t in $(find $RPM_BUILD_ROOT%{_datadir}/terminfo -samefile $i); do
@@ -201,26 +223,37 @@ echo "INPUT(-lncursesw)" > $RPM_BUILD_ROOT%{_libdir}/libcursesw.so
 
 echo "INPUT(-ltinfo)" > $RPM_BUILD_ROOT%{_libdir}/libtermcap.so
 
+rm -f $RPM_BUILD_ROOT%{_bindir}/ncurses*5-config
 rm -f $RPM_BUILD_ROOT%{_libdir}/terminfo
 rm -f $RPM_BUILD_ROOT%{_libdir}/pkgconfig/*_g.pc
 
-bzip2 NEWS
+xz NEWS
 
-%post libs -p /sbin/ldconfig
+%ldconfig_scriptlets libs
 
-%postun libs -p /sbin/ldconfig
+%ldconfig_scriptlets c++-libs
+
+%ldconfig_scriptlets compat-libs
 
 %files
-%doc ANNOUNCE AUTHORS NEWS.bz2 README TO-DO
+%doc ANNOUNCE AUTHORS NEWS.xz README TO-DO
 %{_bindir}/[cirt]*
 %{_mandir}/man1/[cirt]*
 %{_mandir}/man5/*
 %{_mandir}/man7/*
 
 %files libs
-%{_libdir}/lib*.so.*
+%exclude %{_libdir}/libncurses++*.so.6*
+%{_libdir}/lib*.so.6*
+
+%files compat-libs
+%{_libdir}/lib*.so.5*
+
+%files c++-libs
+%{_libdir}/libncurses++*.so.6*
 
 %files base -f terms.base
+%license COPYING
 %doc README
 %dir %{_sysconfdir}/terminfo
 %{_datadir}/tabset
@@ -229,7 +262,6 @@ bzip2 NEWS
 %files term -f terms.term
 
 %files devel
-%doc test
 %doc doc/html/hackguide.html
 %doc doc/html/ncurses-intro.html
 %doc c++/README*
@@ -249,14 +281,198 @@ bzip2 NEWS
 %{_libdir}/lib*.a
 
 %changelog
-* Tue Aug 15 2017 Miroslav Lichvar <mlichvar@redhat.com> 5.9-14.20130511
-- fix crash in libtinfo initialization (#1426215)
+* Thu Jan 19 2023 Fedora Release Engineering <releng@fedoraproject.org> - 6.4-3.20230114
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_38_Mass_Rebuild
 
-* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 5.9-13.20130511
-- Mass rebuild 2014-01-24
+* Tue Jan 17 2023 Miroslav Lichvar <mlichvar@redhat.com> 6.4-2.20230114
+- update to 6.4-20230114 (#2160276)
 
-* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 5.9-12.20130511
-- Mass rebuild 2013-12-27
+* Mon Jan 09 2023 Miroslav Lichvar <mlichvar@redhat.com> 6.4-1.20230107
+- update to 6.4-20230107
+- restore compat-libs (ABI 5) subpackage (#2129865)
+
+* Fri Dec 16 2022 Miroslav Lichvar <mlichvar@redhat.com> 6.3-5.20221126
+- revert "enable symbol versioning for dynamic linker (#1875587)"
+
+* Thu Dec 01 2022 Miroslav Lichvar <mlichvar@redhat.com> 6.3-4.20221126
+- update to 6.3-20221126
+- enable symbol versioning for dynamic linker (#1875587)
+
+* Fri Jul 22 2022 Fedora Release Engineering <releng@fedoraproject.org> - 6.3-3.20220501
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_37_Mass_Rebuild
+
+* Wed May 04 2022 Miroslav Lichvar <mlichvar@redhat.com> 6.3-2.20220501
+- update to 6.3-20220501
+
+* Tue Apr 19 2022 Miroslav Lichvar <mlichvar@redhat.com> 6.3-1.20220416
+- update to 6.3-20220416 (CVE-2022-29458)
+- drop compat-libs (ABI 5) subpackage
+
+* Thu Jan 20 2022 Fedora Release Engineering <releng@fedoraproject.org> - 6.2-9.20210508
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
+
+* Thu Jul 22 2021 Fedora Release Engineering <releng@fedoraproject.org> - 6.2-8.20210508
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_35_Mass_Rebuild
+
+* Mon May 10 2021 Miroslav Lichvar <mlichvar@redhat.com> 6.2-7.20210508
+- update to 6.2-20210508
+
+* Tue May 04 2021 Miroslav Lichvar <mlichvar@redhat.com> 6.2-6.20210501
+- update to 6.2-20210501
+
+* Thu Mar 11 2021 Miroslav Lichvar <mlichvar@redhat.com> 6.2-5.20210306
+- update to 6.2-20210306
+
+* Tue Jan 26 2021 Fedora Release Engineering <releng@fedoraproject.org> - 6.2-4.20200222
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_34_Mass_Rebuild
+- Use make macros
+- Remove %license definition
+- Add BuildRequires: make
+
+* Tue Jul 28 2020 Fedora Release Engineering <releng@fedoraproject.org> - 6.2-3.20200222
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_33_Mass_Rebuild
+
+* Tue Jun 23 2020 Miroslav Lichvar <mlichvar@redhat.com> 6.2-2.20200222
+- move alacritty and kitty entries to -base (#1849974)
+
+* Wed Feb 26 2020 Miroslav Lichvar <mlichvar@redhat.com> 6.2-1.20200222
+- update to 6.2-20200222
+
+* Wed Jan 29 2020 Fedora Release Engineering <releng@fedoraproject.org> - 6.1-15.20191109
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_32_Mass_Rebuild
+
+* Tue Nov 12 2019 Miroslav Lichvar <mlichvar@redhat.com> 6.1-14.20191109
+- update to 6.1-20191109
+- remove LDFLAGS from pkgconfig files and ncurses-config scripts (#1771137)
+
+* Thu Oct 31 2019 Miroslav Lichvar <mlichvar@redhat.com> 6.1-13.20191026
+- update to 6.1-20191026 (CVE-2019-17594 CVE-2019-17595)
+- restore rxvt-unicode-256color terminfo (Robbie Harwood) (#1430935)
+- conflict/obsolete rxvt-unicode (sub)packages with terminfo (#1430935)
+- drop old obsoletes and conflicts
+
+* Wed Aug 07 2019 Miroslav Lichvar <mlichvar@redhat.com> 6.1-12.20190803
+- update to 6.1-20190803
+- verify upstream signatures
+- compress NEWS by xz
+
+* Wed Jul 24 2019 Miroslav Lichvar <mlichvar@redhat.com> 6.1-11.20190720
+- update to 6.1-20190720
+
+* Fri Feb 01 2019 Fedora Release Engineering <releng@fedoraproject.org> - 6.1-10.20180923
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_30_Mass_Rebuild
+
+* Wed Jan 16 2019 Miroslav Lichvar <mlichvar@redhat.com> 6.1-9.20180923
+- disable stripping on program installation
+
+* Mon Sep 24 2018 Miroslav Lichvar <mlichvar@redhat.com> 6.1-8.20180923
+- update to 6.1-20180923
+
+* Mon Jul 16 2018 Miroslav Lichvar <mlichvar@redhat.com> 6.1-7.20180714
+- update to 6.1-20180714
+- add gcc-c++ to build requirements
+
+* Fri Jul 13 2018 Fedora Release Engineering <releng@fedoraproject.org> - 6.1-6.20180224
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
+
+* Wed May 09 2018 Miroslav Lichvar <mlichvar@redhat.com> 6.1-5.20180224
+- fix crash in parsing of terminfo use capability (CVE-2018-10754)
+
+* Mon Feb 26 2018 Miroslav Lichvar <mlichvar@redhat.com> 6.1-4.20180224
+- update to 6.1-20180224
+- add gcc to build requirements
+
+* Thu Feb 08 2018 Fedora Release Engineering <releng@fedoraproject.org> - 6.1-3.20180129
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
+* Tue Jan 30 2018 Miroslav Lichvar <mlichvar@redhat.com> 6.1-2.20180129
+- update to 6.1-20180129
+- use macro for ldconfig scriptlets
+
+* Mon Jan 29 2018 Miroslav Lichvar <mlichvar@redhat.com> 6.1-1.20180127
+- update to 6.1-20180127
+
+* Thu Nov 30 2017 Miroslav Lichvar <mlichvar@redhat.com> 6.0-15.20171125
+- update to 6.0-20171125 (CVE-2017-16879)
+
+* Wed Sep 20 2017 Miroslav Lichvar <mlichvar@redhat.com> 6.0-14.20170916
+- update to 6.0-20170916 (CVE-2017-13728 CVE-2017-13729 CVE-2017-13730
+  CVE-2017-13731 CVE-2017-13732 CVE-2017-13733 CVE-2017-13734)
+
+* Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 6.0-13.20170722
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
+
+* Sun Jul 30 2017 Florian Weimer <fweimer@redhat.com> - 6.0-12.20170722
+- Rebuild with binutils fix for ppc64le (#1475636)
+
+* Wed Jul 26 2017 Miroslav Lichvar <mlichvar@redhat.com> 6.0-11.20170722
+- update to 6.0-20170722 (CVE-2017-10684 CVE-2017-10685 CVE-2017-11112
+  CVE-2017-11113)
+
+* Mon May 29 2017 Miroslav Lichvar <mlichvar@redhat.com> 6.0-10.20170520
+- fix compatibility between libtinfo and libncurses (#1456340)
+
+* Fri May 26 2017 Miroslav Lichvar <mlichvar@redhat.com> 6.0-9.20170520
+- update to 6.0-20170520
+
+* Tue Feb 14 2017 Miroslav Lichvar <mlichvar@redhat.com> 6.0-8.20170212
+- update to 6.0-20170212
+
+* Fri Feb 10 2017 Fedora Release Engineering <releng@fedoraproject.org> - 6.0-7.20160709
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+
+* Tue Jul 19 2016 Miroslav Lichvar <mlichvar@redhat.com> 6.0-6.20160709
+- update to 6.0-20160709
+
+* Fri Apr 08 2016 Yaakov Selkowitz <yselkowi@redhat.com> 6.0-5.20160116
+- separate ncurses-c++-libs subpackage (#1324575)
+
+* Thu Feb 04 2016 Fedora Release Engineering <releng@fedoraproject.org> - 6.0-4.20160116
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
+* Tue Jan 26 2016 Miroslav Lichvar <mlichvar@redhat.com> 6.0-3.20160116
+- make installed ncurses.h compatible with narrow-char libncurses (#1270534)
+
+* Mon Jan 18 2016 Miroslav Lichvar <mlichvar@redhat.com> 6.0-2.20160116
+- update to 6.0-20160116
+
+* Thu Aug 13 2015 Miroslav Lichvar <mlichvar@redhat.com> 6.0-1.20150810
+- update to 6.0-20150810
+- build ABI 5 and ABI 6 libraries
+- add compat-libs subpackage for ABI 5 libraries
+- update rxvt-unicode terminfo
+- don't include tests in devel documentation
+
+* Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.9-21.20150214
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
+* Sat May 02 2015 Kalev Lember <kalevlember@gmail.com> - 5.9-20.20150214
+- Rebuilt for GCC 5 C++11 ABI change
+
+* Sat Feb 21 2015 Till Maas <opensource@till.name> - 5.9-19.20150214
+- Rebuilt for Fedora 23 Change
+  https://fedoraproject.org/wiki/Changes/Harden_all_packages_with_position-independent_code
+
+* Fri Feb 20 2015 Miroslav Lichvar <mlichvar@redhat.com> 5.9-18.20150214
+- update to 5.9-20150214
+
+* Fri Sep 12 2014 Miroslav Lichvar <mlichvar@redhat.com> 5.9-17.20140906
+- update to 5.9-20140906
+
+* Sun Aug 17 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.9-16.20140323
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
+
+* Fri Jul 18 2014 Tom Callaway <spot@fedoraproject.org> - 5.9-15.20140323
+- fix license handling
+
+* Sat Jun 07 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.9-14.20140323
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
+* Wed Mar 26 2014 Miroslav Lichvar <mlichvar@redhat.com> 5.9-13.20140323
+- update to 20140323
+
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 5.9-12.20130511
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
 * Mon May 13 2013 Miroslav Lichvar <mlichvar@redhat.com> 5.9-11.20130511
 - update to 20130511
