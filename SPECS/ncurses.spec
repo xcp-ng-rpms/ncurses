@@ -1,21 +1,23 @@
-%global package_speccommit cbae5fd45725d6304428e59f531b093329c07546
+%global package_speccommit d59aa8d483df74dc43781ab79679776eef370099
 %global usver 6.4
-%global xsver 3
+%global xsver 4
 %global xsrel %{xsver}%{?xscount}%{?xshash}
-%global revision 20230114
+%global revision 20240309
 Summary: Ncurses support utilities
 Name: ncurses
 Version: 6.4
 Release: %{?xsrel}%{?dist}
 License: MIT
 URL: https://invisible-island.net/ncurses/ncurses.html
-Source0: ncurses-6.4-20230114.tgz
-Source1: ncurses-6.4-20230114.tgz.asc
+Source0: ncurses-6.4-20240309.tgz
+Source1: ncurses-6.4-20240309.tgz.asc
 Source2: dickey@invisible-island.net-rsa3072.asc
+Source3: assert-compat.c
 Patch0: ncurses-config.patch
 Patch1: ncurses-libs.patch
 Patch2: ncurses-urxvt.patch
 Patch3: ncurses-kbs.patch
+Patch4: ncurses-monotonic.patch
 
 BuildRequires: gcc gcc-c++ gpm-devel gnupg2 make pkgconfig
 
@@ -153,12 +155,18 @@ for abi in 5 6; do
         %configure $(
             echo $common_options --with-abi-version=$abi
             [ $abi = 5 ] && echo $abi5_options
-            [ $char = widec ] && echo --enable-widec
+            [ $char = widec ] && echo --enable-widec || echo --disable-widec
             [ $progs = yes ] || echo --without-progs
         )
 
         %make_build libs
         [ $progs = yes ] && %make_build -C progs
+
+        # Build and run a test program to verify there are no conflicts in lib versions
+        [ $char = widec ] && lib=ncursesw || lib=ncurses
+        gcc -o assert-compat %{SOURCE3} -Iinclude -Llib -l$lib
+        ./assert-compat
+        rm -f assert-compat
 
         popd
     done
@@ -283,6 +291,9 @@ xz NEWS
 %{_libdir}/lib*.a
 
 %changelog
+* Wed Aug 14 2024 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 6.4-4
+- CP-48941: Update ncurses to MONOTONIC
+
 * Wed Apr 10 2024 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 6.4-3
 - CA-391276: Revert previous changes due to regression
 
