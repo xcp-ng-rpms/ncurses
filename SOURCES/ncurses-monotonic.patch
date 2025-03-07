@@ -1,0 +1,96 @@
+diff -up ncurses-6.4-20230114/Ada95/configure.monotonic ncurses-6.4-20230114/Ada95/configure
+--- ncurses-6.4-20230114/Ada95/configure.monotonic	2024-03-07 16:24:05.070278000 +0000
++++ ncurses-6.4-20230114/Ada95/configure	2024-03-07 16:09:28.458277000 +0000
+@@ -16492,7 +16492,7 @@ int
+ main (void)
+ {
+ struct timespec ts;
+-		int rc = clock_gettime(CLOCK_REALTIME, &ts); (void) rc; (void)ts
++		int rc = clock_gettime(CLOCK_MONOTONIC, &ts); (void) rc; (void)ts
+   ;
+   return 0;
+ }
+diff -up ncurses-6.4-20230114/Ada95/aclocal.m4.monotonic ncurses-6.4-20230114/Ada95/aclocal.m4
+--- ncurses-6.4-20230114/Ada95/aclocal.m4.monotonic	2024-03-07 16:24:05.059260000 +0000
++++ ncurses-6.4-20230114/Ada95/aclocal.m4	2024-03-07 16:09:28.415267000 +0000
+@@ -1402,7 +1402,7 @@ AC_DEFUN([CF_FUNC_GETTIME],[
+ AC_CACHE_CHECK(for clock_gettime,cf_cv_func_clock_gettime,[
+ 		AC_TRY_LINK([#include <time.h>],
+ 		[struct timespec ts;
+-		int rc = clock_gettime(CLOCK_REALTIME, &ts); (void) rc; (void)ts],
++		int rc = clock_gettime(CLOCK_MONOTONIC, &ts); (void) rc; (void)ts],
+ 		[cf_cv_func_clock_gettime=yes],
+ 		[cf_cv_func_clock_gettime=no])
+ ])
+diff -up ncurses-6.4-20230114/test/configure.monotonic ncurses-6.4-20230114/test/configure
+--- ncurses-6.4-20230114/test/configure.monotonic	2024-03-07 16:24:05.117261000 +0000
++++ ncurses-6.4-20230114/test/configure	2024-03-07 16:09:28.532257000 +0000
+@@ -18576,7 +18576,7 @@ int
+ main (void)
+ {
+ struct timespec ts;
+-		int rc = clock_gettime(CLOCK_REALTIME, &ts); (void) rc; (void)ts
++		int rc = clock_gettime(CLOCK_MONOTONIC, &ts); (void) rc; (void)ts
+   ;
+   return 0;
+ }
+diff -up ncurses-6.4-20230114/test/test.priv.h.monotonic ncurses-6.4-20230114/test/test.priv.h
+--- ncurses-6.4-20230114/test/test.priv.h.monotonic	2024-03-07 16:24:05.121252000 +0000
++++ ncurses-6.4-20230114/test/test.priv.h	2024-03-07 16:09:28.464254000 +0000
+@@ -1088,7 +1088,7 @@ extern int TABSIZE;
+ #endif
+ 
+ #if HAVE_CLOCK_GETTIME
+-# define GetClockTime(t) clock_gettime(CLOCK_REALTIME, t)
++# define GetClockTime(t) clock_gettime(CLOCK_MONOTONIC, t)
+ # define TimeType struct timespec
+ # define TimeScale 1000000000L		/* 1e9 */
+ # define ElapsedSeconds(b,e) \
+diff -up ncurses-6.4-20230114/test/aclocal.m4.monotonic ncurses-6.4-20230114/test/aclocal.m4
+--- ncurses-6.4-20230114/test/aclocal.m4.monotonic	2024-03-07 16:24:05.104270000 +0000
++++ ncurses-6.4-20230114/test/aclocal.m4	2024-03-07 16:09:28.477257000 +0000
+@@ -1693,7 +1693,7 @@ AC_DEFUN([CF_FUNC_GETTIME],[
+ AC_CACHE_CHECK(for clock_gettime,cf_cv_func_clock_gettime,[
+ 		AC_TRY_LINK([#include <time.h>],
+ 		[struct timespec ts;
+-		int rc = clock_gettime(CLOCK_REALTIME, &ts); (void) rc; (void)ts],
++		int rc = clock_gettime(CLOCK_MONOTONIC, &ts); (void) rc; (void)ts],
+ 		[cf_cv_func_clock_gettime=yes],
+ 		[cf_cv_func_clock_gettime=no])
+ ])
+diff -up ncurses-6.4-20230114/ncurses/curses.priv.h.monotonic ncurses-6.4-20230114/ncurses/curses.priv.h
+--- ncurses-6.4-20230114/ncurses/curses.priv.h.monotonic	2024-03-07 16:24:05.099265000 +0000
++++ ncurses-6.4-20230114/ncurses/curses.priv.h	2024-03-07 16:09:28.541253000 +0000
+@@ -734,7 +734,7 @@ extern NCURSES_EXPORT(void) _nc_set_read
+ 
+ #if HAVE_CLOCK_GETTIME
+ # define PRECISE_GETTIME 1
+-# define GetClockTime(t) clock_gettime(CLOCK_REALTIME, t)
++# define GetClockTime(t) clock_gettime(CLOCK_MONOTONIC, t)
+ # define TimeType struct timespec
+ # define TimeScale 1000000000L		/* 1e9 */
+ # define sub_secs tv_nsec
+diff -up ncurses-6.4-20230114/configure.monotonic ncurses-6.4-20230114/configure
+--- ncurses-6.4-20230114/configure.monotonic	2024-03-07 16:24:05.094281000 +0000
++++ ncurses-6.4-20230114/configure	2024-03-07 16:09:28.608260000 +0000
+@@ -21455,7 +21455,7 @@ int
+ main (void)
+ {
+ struct timespec ts;
+-		int rc = clock_gettime(CLOCK_REALTIME, &ts); (void) rc; (void)ts
++		int rc = clock_gettime(CLOCK_MONOTONIC, &ts); (void) rc; (void)ts
+   ;
+   return 0;
+ }
+diff -up ncurses-6.4-20230114/aclocal.m4.monotonic ncurses-6.4-20230114/aclocal.m4
+--- ncurses-6.4-20230114/aclocal.m4.monotonic	2024-03-07 16:24:05.078265000 +0000
++++ ncurses-6.4-20230114/aclocal.m4	2024-03-07 16:08:37.192021000 +0000
+@@ -2629,7 +2629,7 @@ AC_DEFUN([CF_FUNC_GETTIME],[
+ AC_CACHE_CHECK(for clock_gettime,cf_cv_func_clock_gettime,[
+ 		AC_TRY_LINK([#include <time.h>],
+ 		[struct timespec ts;
+-		int rc = clock_gettime(CLOCK_REALTIME, &ts); (void) rc; (void)ts],
++		int rc = clock_gettime(CLOCK_MONOTONIC, &ts); (void) rc; (void)ts],
+ 		[cf_cv_func_clock_gettime=yes],
+ 		[cf_cv_func_clock_gettime=no])
+ ])
