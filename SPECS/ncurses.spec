@@ -287,7 +287,7 @@ xz NEWS
 %{_libdir}/lib*.a
 
 %changelog
-* Wed Mar  5 2025 Yann Dirson <yann.dirson@valtes.tech> - 6.4-5.20240309
+* Wed Mar  5 2025 Yann Dirson <yann.dirson@vates.tech> - 6.4-5.20240309
 - sync with XS 6.4-4
 - unlisted XS changes:
   - Upgrade upstream revision to 20240309
@@ -296,7 +296,7 @@ xz NEWS
   * Wed Aug 14 2024 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 6.4-4
   - CP-48941: Update ncurses to MONOTONIC
 
-* Wed Mar  5 2025 Yann Dirson <yann.dirson@valtes.tech> - 6.4-4.20230114
+* Wed Mar  5 2025 Yann Dirson <yann.dirson@vates.tech> - 6.4-4.20230114
 - Restore Fedora changelog and versionning, while keeping other XS-ification
 - XS changelog:
   * Wed Apr 10 2024 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 6.4-3
