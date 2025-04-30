@@ -2,7 +2,7 @@
 Summary: Ncurses support utilities
 Name: ncurses
 Version: 6.4
-Release: 5.%{revision}%{?dist}
+Release: 6.%{revision}%{?dist}
 License: MIT
 URL: https://invisible-island.net/ncurses/ncurses.html
 Source0: ncurses-%{version}-%{revision}.tgz
@@ -100,6 +100,9 @@ the ncurses terminal handling library.
 Install the ncurses-devel package if you want to develop applications
 which will use ncurses.
 
+Note this package will build for ncurses-compat libs to stay compatible
+with CentOS7 software.
+
 %package static
 Summary: Static libraries for the ncurses library
 Requires: %{name}-devel%{?_isa} = %{version}-%{release}
@@ -146,7 +149,7 @@ for abi in 5 6; do
         pushd $char$abi
         ln -s ../configure .
 
-        [ $abi = 6 -a $char = widec ] && progs=yes || progs=no
+        [ $abi = 5 -a $char = widec ] && progs=yes || progs=no
 
         %configure $(
             echo $common_options --with-abi-version=$abi
@@ -169,12 +172,12 @@ for abi in 5 6; do
 done
 
 %install
-make -C narrowc5 DESTDIR=$RPM_BUILD_ROOT install.libs
-rm ${RPM_BUILD_ROOT}%{_libdir}/lib{tic,tinfo}.so.5*
-make -C widec5 DESTDIR=$RPM_BUILD_ROOT install.libs
 make -C narrowc6 DESTDIR=$RPM_BUILD_ROOT install.libs
 rm ${RPM_BUILD_ROOT}%{_libdir}/lib{tic,tinfo}.so.6*
-make -C widec6 DESTDIR=$RPM_BUILD_ROOT install.{libs,progs,data,includes,man}
+make -C widec6 DESTDIR=$RPM_BUILD_ROOT install.libs
+make -C narrowc5 DESTDIR=$RPM_BUILD_ROOT install.libs
+rm ${RPM_BUILD_ROOT}%{_libdir}/lib{tic,tinfo}.so.5*
+make -C widec5 DESTDIR=$RPM_BUILD_ROOT install.{libs,progs,data,includes,man}
 
 chmod 755 ${RPM_BUILD_ROOT}%{_libdir}/lib*.so.*.*
 chmod 644 ${RPM_BUILD_ROOT}%{_libdir}/lib*.a
@@ -229,7 +232,7 @@ echo "INPUT(-lncursesw)" > $RPM_BUILD_ROOT%{_libdir}/libcursesw.so
 
 echo "INPUT(-ltinfo)" > $RPM_BUILD_ROOT%{_libdir}/libtermcap.so
 
-rm -f $RPM_BUILD_ROOT%{_bindir}/ncurses*5-config
+rm -f $RPM_BUILD_ROOT%{_bindir}/ncurses*6-config
 rm -f $RPM_BUILD_ROOT%{_libdir}/terminfo
 rm -f $RPM_BUILD_ROOT%{_libdir}/pkgconfig/*_g.pc
 
@@ -287,7 +290,10 @@ xz NEWS
 %{_libdir}/lib*.a
 
 %changelog
-* Wed Mar  5 2025 Yann Dirson <yann.dirson@valtes.tech> - 6.4-5.20240309
+* Mon Apr 28 2025 Yann Dirson <yann.dirson@vates.tech> - 6.4-6.20240309
+- make it so devel package builds for the "compat" ABI-5 libs
+
+* Wed Mar  5 2025 Yann Dirson <yann.dirson@vates.tech> - 6.4-5.20240309
 - sync with XS 6.4-4
 - unlisted XS changes:
   - Upgrade upstream revision to 20240309
@@ -296,7 +302,7 @@ xz NEWS
   * Wed Aug 14 2024 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 6.4-4
   - CP-48941: Update ncurses to MONOTONIC
 
-* Wed Mar  5 2025 Yann Dirson <yann.dirson@valtes.tech> - 6.4-4.20230114
+* Wed Mar  5 2025 Yann Dirson <yann.dirson@vates.tech> - 6.4-4.20230114
 - Restore Fedora changelog and versionning, while keeping other XS-ification
 - XS changelog:
   * Wed Apr 10 2024 Gerald Elder-Vass <gerald.elder-vass@cloud.com> - 6.4-3
